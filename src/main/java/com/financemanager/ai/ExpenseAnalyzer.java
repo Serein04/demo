@@ -1,10 +1,19 @@
 package com.financemanager.ai;
 
-import com.financemanager.model.Transaction;
-import com.financemanager.model.BudgetManager;
-import java.time.*;
-import java.util.*;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+
+import com.financemanager.model.BudgetManager;
+import com.financemanager.model.Transaction;
 
 /**
  * 支出分析器类
@@ -13,6 +22,15 @@ import java.util.stream.Collectors;
 public class ExpenseAnalyzer {
     private static final int MONTHS_TO_ANALYZE = 6; // 分析最近6个月的数据
     private static final double SEASONAL_THRESHOLD = 1.5; // 季节性支出阈值（相对于平均值）
+    
+    private final TransactionClassifier classifier;
+    
+    /**
+     * 构造函数
+     */
+    public ExpenseAnalyzer(TransactionClassifier classifier) {
+        this.classifier = classifier;
+    }
     
     /**
      * 获取基本统计数据
@@ -337,6 +355,75 @@ public class ExpenseAnalyzer {
         }
         
         return opportunities;
+    }
+    
+    /**
+     * 根据类别提供详细分析
+     * @param transactions 交易记录列表
+     * @param category 类别名称
+     * @return 详细分析结果
+     */
+    public Map<String, Object> analyzeCategoryDetails(List<Transaction> transactions, String category) {
+        Map<String, Object> result = new HashMap<>();
+        
+        // 筛选指定类别的交易
+        List<Transaction> categoryTransactions = transactions.stream()
+                .filter(t -> t.getCategory().equals(category))
+                .collect(Collectors.toList());
+        
+        if (categoryTransactions.isEmpty()) {
+            result.put("error", "没有找到该类别的交易记录");
+            return result;
+        }
+        
+        // 获取类别描述
+        String description = classifier.getCategoryDescription(category);
+        result.put("description", description);
+        
+        // 计算基本统计数据
+        double totalAmount = categoryTransactions.stream()
+                .mapToDouble(Transaction::getAmount)
+                .sum();
+        double averageAmount = categoryTransactions.stream()
+                .mapToDouble(Transaction::getAmount)
+                .average()
+                .orElse(0);
+        int count = categoryTransactions.size();
+        
+        result.put("totalAmount", totalAmount);
+        result.put("averageAmount", averageAmount);
+        result.put("count", count);
+        
+        // 分析月度趋势
+        Map<YearMonth, Double> monthlyTrend = categoryTransactions.stream()
+                .collect(Collectors.groupingBy(
+                        t -> YearMonth.from(t.getDate()),
+                        Collectors.summingDouble(Transaction::getAmount)
+                ));
+        result.put("monthlyTrend", monthlyTrend);
+        
+        // 分析相关类别
+        Map<String, List<String>> relatedCategories = classifier.analyzeRelatedCategories(transactions);
+        if (relatedCategories.containsKey(category)) {
+            result.put("relatedCategories", relatedCategories.get(category));
+        }
+        
+        // 检测异常支出
+        double categoryAverage = averageAmount;
+        List<Transaction> abnormalExpenses = categoryTransactions.stream()
+                .filter(t -> t.getAmount() > categoryAverage * 2)
+                .collect(Collectors.toList());
+        result.put("abnormalExpenses", abnormalExpenses);
+        
+        // 分析支出频率
+        Map<DayOfWeek, Long> dayOfWeekFrequency = categoryTransactions.stream()
+                .collect(Collectors.groupingBy(
+                        t -> t.getDate().getDayOfWeek(),
+                        Collectors.counting()
+                ));
+        result.put("dayOfWeekFrequency", dayOfWeekFrequency);
+        
+        return result;
     }
     
     /**

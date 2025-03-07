@@ -1,8 +1,19 @@
 package com.financemanager.ai;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.financemanager.model.Transaction;
-import java.util.*;
-import java.io.*;
 
 /**
  * 交易分类器类
@@ -19,8 +30,36 @@ public class TransactionClassifier {
             "工资", "奖金", "投资收益", "兼职收入", "礼金", "退款", "其他收入"
     );
     
+    // 类别描述，用于AI分析
+    private static final Map<String, String> CATEGORY_DESCRIPTIONS = new HashMap<>();
+    static {
+        // 支出类别描述
+        CATEGORY_DESCRIPTIONS.put("餐饮", "包括在餐厅、咖啡店、外卖等食品消费");
+        CATEGORY_DESCRIPTIONS.put("购物", "包括在超市、商场、网购平台等购买商品");
+        CATEGORY_DESCRIPTIONS.put("交通", "包括公共交通、打车、加油、停车费等");
+        CATEGORY_DESCRIPTIONS.put("住房", "包括房租、物业费、水电费等住房相关支出");
+        CATEGORY_DESCRIPTIONS.put("娱乐", "包括电影、游戏、KTV等娱乐活动");
+        CATEGORY_DESCRIPTIONS.put("教育", "包括学费、书籍、培训课程等教育支出");
+        CATEGORY_DESCRIPTIONS.put("医疗", "包括看病、买药、体检等医疗支出");
+        CATEGORY_DESCRIPTIONS.put("旅行", "包括机票、酒店、景点门票等旅行支出");
+        CATEGORY_DESCRIPTIONS.put("日用品", "包括洗漱用品、清洁用品等日常必需品");
+        CATEGORY_DESCRIPTIONS.put("通讯", "包括手机话费、网费等通讯支出");
+        CATEGORY_DESCRIPTIONS.put("服装", "包括衣服、鞋子、配饰等服装支出");
+        CATEGORY_DESCRIPTIONS.put("礼品", "包括送礼、红包等礼品支出");
+        CATEGORY_DESCRIPTIONS.put("其他支出", "不属于以上类别的其他支出");
+        
+        // 收入类别描述
+        CATEGORY_DESCRIPTIONS.put("工资", "包括固定工资、奖金、津贴等");
+        CATEGORY_DESCRIPTIONS.put("奖金", "包括年终奖、绩效奖金、项目奖金等");
+        CATEGORY_DESCRIPTIONS.put("投资收益", "包括股票、基金、理财产品等投资收益");
+        CATEGORY_DESCRIPTIONS.put("兼职收入", "包括兼职工作、自由职业等收入");
+        CATEGORY_DESCRIPTIONS.put("礼金", "包括收到的红包、礼金等");
+        CATEGORY_DESCRIPTIONS.put("退款", "包括商品退款、服务退款等");
+        CATEGORY_DESCRIPTIONS.put("其他收入", "不属于以上类别的其他收入");
+    }
+    
     // 用户自定义的类别关键词映射
-    private Map<String, List<String>> categoryKeywords;
+    private final Map<String, List<String>> categoryKeywords;
     private static final String KEYWORDS_FILE = "data/category_keywords.csv";
     
     public TransactionClassifier() {
@@ -34,22 +73,25 @@ public class TransactionClassifier {
      */
     private void loadDefaultKeywords() {
         // 餐饮类关键词
-        categoryKeywords.put("餐饮", Arrays.asList(
+        List<String> foodKeywords = new ArrayList<>(Arrays.asList(
                 "餐厅", "饭店", "食堂", "外卖", "美食", "小吃", "咖啡", "奶茶", 
                 "早餐", "午餐", "晚餐", "宵夜", "火锅", "烧烤", "快餐"
         ));
+        categoryKeywords.put("餐饮", foodKeywords);
         
         // 购物类关键词
-        categoryKeywords.put("购物", Arrays.asList(
+        List<String> shoppingKeywords = new ArrayList<>(Arrays.asList(
                 "超市", "商场", "淘宝", "京东", "拼多多", "电商", "网购", 
                 "购物中心", "百货", "便利店", "市场"
         ));
+        categoryKeywords.put("购物", shoppingKeywords);
         
         // 交通类关键词
-        categoryKeywords.put("交通", Arrays.asList(
+        List<String> transportKeywords = new ArrayList<>(Arrays.asList(
                 "地铁", "公交", "出租车", "打车", "滴滴", "高铁", "火车", "飞机", 
                 "机票", "加油", "停车费", "过路费", "共享单车"
         ));
+        categoryKeywords.put("交通", transportKeywords);
         
         // 其他类别的默认关键词...
         // 实际应用中可以添加更多类别的关键词
@@ -222,5 +264,77 @@ public class TransactionClassifier {
             // 提取可能的关键词（这里简化为使用整个描述作为关键词）
             addCategoryKeyword(correctedCategory, description);
         }
+    }
+    
+    /**
+     * 获取类别描述
+     * 用于AI分析和用户理解
+     */
+    public String getCategoryDescription(String category) {
+        return CATEGORY_DESCRIPTIONS.getOrDefault(category, "未提供描述");
+    }
+    
+    /**
+     * 获取所有类别及其描述
+     */
+    public Map<String, String> getAllCategoryDescriptions() {
+        return new HashMap<>(CATEGORY_DESCRIPTIONS);
+    }
+    
+    /**
+     * 根据交易类别分组交易记录
+     * 用于分析报告
+     */
+    public Map<String, List<Transaction>> groupTransactionsByCategory(List<Transaction> transactions) {
+        Map<String, List<Transaction>> result = new HashMap<>();
+        
+        for (Transaction transaction : transactions) {
+            String category = transaction.getCategory();
+            if (!result.containsKey(category)) {
+                result.put(category, new ArrayList<>());
+            }
+            result.get(category).add(transaction);
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 分析类别之间的关联性
+     * 例如，某些类别的支出是否经常同时发生
+     */
+    public Map<String, List<String>> analyzeRelatedCategories(List<Transaction> transactions) {
+        Map<String, List<String>> result = new HashMap<>();
+        
+        // 按日期分组交易
+        Map<LocalDate, List<Transaction>> transactionsByDate = new HashMap<>();
+        for (Transaction transaction : transactions) {
+            LocalDate date = transaction.getDate();
+            if (!transactionsByDate.containsKey(date)) {
+                transactionsByDate.put(date, new ArrayList<>());
+            }
+            transactionsByDate.get(date).add(transaction);
+        }
+        
+        // 分析同一天发生的不同类别交易
+        for (List<Transaction> dailyTransactions : transactionsByDate.values()) {
+            if (dailyTransactions.size() > 1) {
+                for (Transaction t1 : dailyTransactions) {
+                    String category1 = t1.getCategory();
+                    if (!result.containsKey(category1)) {
+                        result.put(category1, new ArrayList<>());
+                    }
+                    
+                    for (Transaction t2 : dailyTransactions) {
+                        String category2 = t2.getCategory();
+                        if (!category1.equals(category2) && !result.get(category1).contains(category2)) {
+                            result.get(category1).add(category2);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return result;
     }
 }

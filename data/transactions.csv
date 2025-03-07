@@ -1,3 +1,6 @@
 id,amount,date,category,description,isExpense,paymentMethod
 d191e424-5a0c-45f3-8d29-bd82e8ce89ab,11.00,2025-03-05,餐饮,早餐,true,微信
 8cc1fcfa-beaf-4c9f-80e4-7ac9e5a2c945,10.00,2025-03-07,餐饮,晚餐,true,现金
+5a95b6ba-a1e5-49df-b868-5db6a7ee33d8,3.00,2025-03-07,餐饮,饮料,true,现金
+0e6267f4-a869-4e15-814e-6aaea946350c,50.00,2025-03-07,购物,买衣服,true,现金
+246ea7a5-ab8c-45b0-8983-b83346587aa9,20000.00,2025-03-07,工资,工资,false,现金

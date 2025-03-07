@@ -1,14 +1,20 @@
 package com.financemanager.model;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 预算管理类
  * 负责管理用户的预算目标和储蓄计划
  */
 public class BudgetManager {
-    private Map<String, Double> categoryBudgets; // 各类别的预算限额
+    private final Map<String, Double> categoryBudgets; // 各类别的预算限额
     private double monthlyBudget; // 月度总预算
     private double savingsGoal; // 储蓄目标
     private static final String BUDGET_FILE = "data/budget.csv";
@@ -95,6 +101,17 @@ public class BudgetManager {
     }
     
     /**
+     * 计算所有类别预算的总和
+     */
+    public double getTotalCategoryBudget() {
+        double total = 0.0;
+        for (Double budget : categoryBudgets.values()) {
+            total += budget;
+        }
+        return total;
+    }
+    
+    /**
      * 保存预算数据到文件
      */
     private void saveBudgetData() {
@@ -141,7 +158,7 @@ public class BudgetManager {
                             break;
                         case "category":
                             if (parts.length >= 3) {
-                                categoryBudgets.put(parts[1], Double.parseDouble(parts[2]));
+                                categoryBudgets.put(parts[1], Double.valueOf(parts[2]));
                             }
                             break;
                     }

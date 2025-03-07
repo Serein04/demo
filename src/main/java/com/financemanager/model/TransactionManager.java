@@ -1,10 +1,16 @@
 package com.financemanager.model;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -12,7 +18,7 @@ import java.util.stream.Collectors;
  * 负责交易记录的增删改查和持久化存储
  */
 public class TransactionManager {
-    private List<Transaction> transactions;
+    private final List<Transaction> transactions;
     private static final String DEFAULT_DATA_FILE = "data/transactions.csv";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
@@ -143,7 +149,7 @@ public class TransactionManager {
                         transactions.add(transaction);
                         importedCount++;
                     }
-                } catch (Exception e) {
+                } catch (NumberFormatException e) {
                     System.err.println("导入行时出错: " + line + ", 错误: " + e.getMessage());
                 }
             }
@@ -215,7 +221,7 @@ public class TransactionManager {
                                 id, amount, date, category, description, isExpense, paymentMethod);
                         transactions.add(transaction);
                     }
-                } catch (Exception e) {
+                } catch (NumberFormatException e) {
                     System.err.println("加载行时出错: " + line + ", 错误: " + e.getMessage());
                 }
             }

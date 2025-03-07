@@ -7,19 +7,20 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.HeadlessException;
 import java.awt.Insets;
 import java.io.File;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -45,10 +46,10 @@ import com.financemanager.model.TransactionManager;
  * 提供用户与应用程序交互的图形界面
  */
 public class MainFrame extends JFrame {
-    private TransactionManager transactionManager;
-    private BudgetManager budgetManager;
-    private TransactionClassifier classifier;
-    private ExpenseAnalyzer analyzer;
+    private final TransactionManager transactionManager;
+    private final BudgetManager budgetManager;
+    private final TransactionClassifier classifier;
+    private final ExpenseAnalyzer analyzer;
     private StartFrame startFrame; // 添加StartFrame引用
     
     // UI组件
@@ -63,7 +64,6 @@ public class MainFrame extends JFrame {
     private JComboBox<String> paymentMethodComboBox;
     private JTextField amountField;
     private JTextField descriptionField;
-    private JCheckBox expenseCheckBox;
     private JButton addButton;
     private JButton importButton;
     private JButton deleteButton;
@@ -80,6 +80,8 @@ public class MainFrame extends JFrame {
     private JComboBox<String> budgetCategoryComboBox;
     private JTextField categoryBudgetField;
     private JButton setBudgetButton;
+    private JTable budgetTable;
+    private DefaultTableModel budgetTableModel;
     
     // 分析组件
     private JPanel analysisPanel;
@@ -454,10 +456,10 @@ public class MainFrame extends JFrame {
         
         // 创建表格模型
         String[] columnNames = {"类别", "预算金额", "当前支出", "剩余金额", "状态"};
-        DefaultTableModel budgetTableModel = new DefaultTableModel(columnNames, 0);
+        budgetTableModel = new DefaultTableModel(columnNames, 0);
         
         // 创建表格
-        JTable budgetTable = new JTable(budgetTableModel);
+        budgetTable = new JTable(budgetTableModel);
         JScrollPane scrollPane = new JScrollPane(budgetTable);
         budgetDisplayPanel.add(scrollPane, BorderLayout.CENTER);
         
@@ -580,6 +582,85 @@ public class MainFrame extends JFrame {
             double budget = budgetManager.getCategoryBudget(selectedCategory);
             categoryBudgetField.setText(String.format("%.2f", budget));
         }
+        
+        // 更新预算表格
+        updateBudgetTable();
+    }
+    
+    /**
+     * 更新预算表格
+     */
+    private void updateBudgetTable() {
+        // 清空表格
+        budgetTableModel.setRowCount(0);
+        
+        // 获取所有交易记录
+        List<Transaction> transactions = transactionManager.getAllTransactions();
+        
+        // 获取当前月份
+        YearMonth currentMonth = YearMonth.now();
+        
+        // 计算当前月份的支出
+        Map<String, Double> categorySpending = new HashMap<>();
+        for (Transaction t : transactions) {
+            if (t.isExpense() && YearMonth.from(t.getDate()).equals(currentMonth)) {
+                String category = t.getCategory();
+                categorySpending.put(category, 
+                        categorySpending.getOrDefault(category, 0.0) + t.getAmount());
+            }
+        }
+        
+        // 获取所有类别预算
+        Map<String, Double> categoryBudgets = budgetManager.getAllCategoryBudgets();
+        
+        // 添加月度总预算行
+        double totalSpending = categorySpending.values().stream().mapToDouble(Double::doubleValue).sum();
+        double monthlyBudget = budgetManager.getMonthlyBudget();
+        double remainingBudget = monthlyBudget - totalSpending;
+        String status = remainingBudget >= 0 ? "正常" : "超支";
+        
+        Object[] totalRow = {
+                "总计",
+                String.format("%.2f", monthlyBudget),
+                String.format("%.2f", totalSpending),
+                String.format("%.2f", remainingBudget),
+                status
+        };
+        budgetTableModel.addRow(totalRow);
+        
+        // 添加各类别预算行
+        for (Map.Entry<String, Double> entry : categoryBudgets.entrySet()) {
+            String category = entry.getKey();
+            double budget = entry.getValue();
+            double spending = categorySpending.getOrDefault(category, 0.0);
+            double remaining = budget - spending;
+            status = remaining >= 0 ? "正常" : "超支";
+            
+            Object[] row = {
+                    category,
+                    String.format("%.2f", budget),
+                    String.format("%.2f", spending),
+                    String.format("%.2f", remaining),
+                    status
+            };
+            budgetTableModel.addRow(row);
+        }
+        
+        // 添加未设置预算但有支出的类别
+        for (String category : categorySpending.keySet()) {
+            if (!categoryBudgets.containsKey(category)) {
+                double spending = categorySpending.get(category);
+                
+                Object[] row = {
+                        category,
+                        "未设置",
+                        String.format("%.2f", spending),
+                        "N/A",
+                        "未设置预算"
+                };
+                budgetTableModel.addRow(row);
+            }
+        }
     }
     
     /**
@@ -613,7 +694,7 @@ public class MainFrame extends JFrame {
                 }
                 // 显示成功消息
                 JOptionPane.showMessageDialog(this, "交易记录添加成功", "成功", JOptionPane.INFORMATION_MESSAGE);
-            } catch (Exception e) {
+            } catch (HeadlessException e) {
                 // AI分类过程中出现异常
                 String errorMessage = e.getMessage() != null ? e.getMessage() : "未知错误";
                 JOptionPane.showMessageDialog(this, 
@@ -631,7 +712,7 @@ public class MainFrame extends JFrame {
             
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "请输入有效的金额", "输入错误", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception e) {
+        } catch (HeadlessException e) {
             JOptionPane.showMessageDialog(this, "添加交易记录时出错: " + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -671,19 +752,14 @@ public class MainFrame extends JFrame {
             }
             
             if (selectedTransaction != null) {
-                // 显示编辑对话框（简化版，实际应用中可以创建一个更复杂的编辑对话框）
-                try {
-                    String amountStr = JOptionPane.showInputDialog(this, "金额:", selectedTransaction.getAmount());
-                    if (amountStr != null) {
-                        double amount = Double.parseDouble(amountStr);
-                        selectedTransaction.setAmount(amount);
-                        
-                        // 更新交易记录
-                        transactionManager.updateTransaction(selectedTransaction);
-                        loadTransactions();
-                    }
-                } catch (NumberFormatException e) {
-                    JOptionPane.showMessageDialog(this, "请输入有效的金额", "输入错误", JOptionPane.ERROR_MESSAGE);
+                // 显示编辑对话框
+                TransactionEditDialog dialog = new TransactionEditDialog(this, selectedTransaction, classifier);
+                dialog.setVisible(true);
+                
+                if (dialog.isConfirmed()) {
+                    // 更新交易记录
+                    transactionManager.updateTransaction(selectedTransaction);
+                    loadTransactions();
                 }
             }
         } else {
@@ -715,6 +791,8 @@ public class MainFrame extends JFrame {
             double amount = Double.parseDouble(monthlyBudgetField.getText());
             budgetManager.setMonthlyBudget(amount);
             JOptionPane.showMessageDialog(this, "月度预算设置成功", "成功", JOptionPane.INFORMATION_MESSAGE);
+            // 更新预算表格
+            updateBudgetTable();
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "请输入有效的金额", "输入错误", JOptionPane.ERROR_MESSAGE);
         }
@@ -744,6 +822,8 @@ public class MainFrame extends JFrame {
             if (category != null) {
                 budgetManager.setCategoryBudget(category, amount);
                 JOptionPane.showMessageDialog(this, "类别预算设置成功", "成功", JOptionPane.INFORMATION_MESSAGE);
+                // 更新预算表格
+                updateBudgetTable();
             }
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "请输入有效的金额", "输入错误", JOptionPane.ERROR_MESSAGE);

@@ -82,48 +82,7 @@ public class AIAssistantPanel extends JPanel {
             displayMessage("系统", "错误：无法加载API配置文件 - " + e.getMessage());
         }
     }
-    
-    /**
-     * 调用API处理用户消息（非流式）
-     */
-    private String callApi(String prompt) throws IOException, InterruptedException {
-        if (apiKey == null || apiKey.isEmpty()) {
-            throw new IOException("API密钥未配置");
-        }
-        
-        // 构建JSON请求体
-        Map<String, Object> requestMap = new HashMap<>();
-        requestMap.put("model", "Pro/deepseek-ai/DeepSeek-V3");
-        
-        Map<String, String> message = new HashMap<>();
-        message.put("role", "user");
-        message.put("content", prompt);
-        
-        requestMap.put("messages", new Object[]{message});
-        requestMap.put("temperature", 0.7);
-        requestMap.put("max_tokens", 1000);
-        requestMap.put("stream", false);
-        
-        // 将Map转换为JSON字符串
-        String requestBody = mapToJsonString(requestMap);
-        
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(API_ENDPOINT))
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer " + apiKey)
-            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-            .build();
-        
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        
-        if (response.statusCode() != 200) {
-            throw new IOException("API请求失败：" + response.body());
-        }
-        
-        // 解析API响应，提取回答内容
-        return parseApiResponse(response.body());
-    }
-    
+
     /**
      * 调用API处理用户消息（流式）
      * 
@@ -251,69 +210,9 @@ public class AIAssistantPanel extends JPanel {
     private String escapeJsonString(String input) {
         return input.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }
-    
     /**
      * 解析API响应
      */
-    private String parseApiResponse(String responseBody) throws IOException {
-        try {
-            // 查找choices数组中第一个消息的content
-            int choicesStart = responseBody.indexOf("\"choices\":");
-            if (choicesStart == -1) {
-                throw new IOException("无法在响应中找到choices字段");
-            }
-            
-            int messageStart = responseBody.indexOf("\"message\":", choicesStart);
-            if (messageStart == -1) {
-                throw new IOException("无法在响应中找到message字段");
-            }
-            
-            int contentStart = responseBody.indexOf("\"content\":", messageStart);
-            if (contentStart == -1) {
-                throw new IOException("无法在响应中找到content字段");
-            }
-            
-            contentStart += 11; // "content": 的长度加上引号
-            
-            // 找到content值的结束位置
-            int contentEnd = -1;
-            boolean inEscape = false;
-            int quoteCount = 0;
-            
-            for (int i = contentStart; i < responseBody.length(); i++) {
-                char c = responseBody.charAt(i);
-                
-                if (inEscape) {
-                    inEscape = false;
-                    continue;
-                }
-                
-                if (c == '\\') {
-                    inEscape = true;
-                    continue;
-                }
-                
-                if (c == '"') {
-                    quoteCount++;
-                    if (quoteCount == 2) { // 找到闭合的引号
-                        contentEnd = i;
-                        break;
-                    }
-                }
-            }
-            
-            if (contentEnd == -1) {
-                throw new IOException("无法解析响应中的content值");
-            }
-            
-            // 提取并解码content值
-            String content = responseBody.substring(contentStart, contentEnd);
-            return unescapeJsonString(content);
-            
-        } catch (Exception e) {
-            throw new IOException("解析API响应失败：" + e.getMessage(), e);
-        }
-    }
     
     /**
      * 解码JSON字符串中的转义字符
@@ -431,13 +330,9 @@ public class AIAssistantPanel extends JPanel {
                 return true;
             }
         }
-        
         // 检查是否是简短的问候语（少于10个字符）
-        if (message.length() < 10) {
-            return true;
-        }
         
-        return false;
+        return message.length() < 10;
     }
     
     /**
@@ -520,7 +415,7 @@ public class AIAssistantPanel extends JPanel {
                             // 发布进度，将接收到的文本块传递给process方法
                             publish(chunk);
                         });
-                    } catch (Exception e) {
+                    } catch (IOException | InterruptedException e) {
                         throw e;
                     }
                     return null;

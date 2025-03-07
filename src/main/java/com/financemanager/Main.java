@@ -1,11 +1,12 @@
 package com.financemanager;
 
+import javax.swing.UnsupportedLookAndFeelException;
+
 import com.financemanager.ai.ExpenseAnalyzer;
 import com.financemanager.ai.TransactionClassifier;
 import com.financemanager.model.BudgetManager;
 import com.financemanager.model.TransactionManager;
 import com.financemanager.view.StartFrame;
-
 
 /**
  * 个人财务管理器应用程序入口类
@@ -20,15 +21,14 @@ public class Main {
         
         // 初始化AI组件
         TransactionClassifier classifier = new TransactionClassifier();
-        ExpenseAnalyzer analyzer = new ExpenseAnalyzer();
+        ExpenseAnalyzer analyzer = new ExpenseAnalyzer(classifier);
         
         // 启动GUI界面
         javax.swing.SwingUtilities.invokeLater(() -> {
             try {
                 // 设置本地化的外观
                 javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException e) {
             }
             
             // 创建并显示启动界面
