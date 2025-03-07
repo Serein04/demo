@@ -165,12 +165,12 @@ public class ExpenseAnalyzer {
             categoryAverages.put(category, average);
         }
         
-        // 检测异常支出（超过类别平均值的2倍）
+        // 检测异常支出（超过类别平均值的3倍）
         return transactions.stream()
                 .filter(Transaction::isExpense)
                 .filter(t -> {
                     double average = categoryAverages.getOrDefault(t.getCategory(), 0.0);
-                    return average > 0 && t.getAmount() > average * 2;
+                    return average > 0 && t.getAmount() > average * 3;
                 })
                 .collect(Collectors.toList());
     }

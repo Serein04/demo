@@ -136,13 +136,13 @@ public class TransactionManager {
             while ((line = reader.readLine()) != null) {
                 try {
                     String[] parts = line.split(",");
-                    if (parts.length >= 6) {
-                        double amount = Double.parseDouble(parts[0]);
-                        LocalDate date = LocalDate.parse(parts[1], DATE_FORMATTER);
-                        String category = parts[2];
-                        String description = parts[3];
-                        boolean isExpense = Boolean.parseBoolean(parts[4]);
-                        String paymentMethod = parts[5];
+                    if (parts.length >= 7) {
+                        double amount = Double.parseDouble(parts[1]);
+                        LocalDate date = LocalDate.parse(parts[2], DATE_FORMATTER);
+                        String category = parts[3];
+                        String description = parts[4];
+                        boolean isExpense = Boolean.parseBoolean(parts[5]);
+                        String paymentMethod = parts[6];
                         
                         Transaction transaction = new Transaction(
                                 amount, date, category, description, isExpense, paymentMethod);
