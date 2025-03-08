@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 # 配置参数
 start_date = datetime.now() - timedelta(days=365)
 end_date = datetime.now()
-num_records = 1500  # 平均每天约4条记录
+num_records = 800  # 平均每天约4条记录
 
 # 交易类别权重
 category_weights = {
