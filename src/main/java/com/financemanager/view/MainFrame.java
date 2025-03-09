@@ -310,10 +310,18 @@ public class MainFrame extends JFrame {
         gbc.gridx = 1;
         paymentMethodComboBox = new JComboBox<>(PAYMENT_METHODS);
         paymentMethodPanel.add(paymentMethodComboBox, gbc);
-        inputPanel.add(paymentMethodPanel, gbc);
         
-        // 根据交易类型控制支付方式组件的显示
-        paymentMethodPanel.setVisible(true); // 默认显示（支出类型）
+        // 创建一个空白面板，与支付方式面板具有相同的尺寸
+        JPanel emptyPanel = new JPanel();
+        emptyPanel.setPreferredSize(paymentMethodPanel.getPreferredSize());
+        
+        // 添加支付方式面板和空白面板到同一位置
+        inputPanel.add(paymentMethodPanel, gbc);
+        inputPanel.add(emptyPanel, gbc);
+        
+        // 默认显示支付方式面板，隐藏空白面板
+        paymentMethodPanel.setVisible(true);
+        emptyPanel.setVisible(false);
         
         // 支出按钮
         JButton expenseButton = new JButton("支出");
@@ -325,6 +333,7 @@ public class MainFrame extends JFrame {
             typeLabel.setText("支出");
             updateCategoryComboBox(true);
             paymentMethodPanel.setVisible(true);
+            emptyPanel.setVisible(false);
         });
         quickAccessPanel.add(expenseButton);
         
@@ -338,11 +347,12 @@ public class MainFrame extends JFrame {
             typeLabel.setText("收入");
             updateCategoryComboBox(false);
             paymentMethodPanel.setVisible(false);
+            emptyPanel.setVisible(true);
         });
         quickAccessPanel.add(incomeButton);
         
-        // 创建按钮面板
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        // 创建按钮面板（居中显示）
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
         
         // 添加按钮
         addButton = new JButton("添加");
@@ -367,8 +377,8 @@ public class MainFrame extends JFrame {
         // 添加输入面板和按钮面板
         JPanel controlPanel = new JPanel(new BorderLayout());
         controlPanel.add(inputPanel, BorderLayout.CENTER);
-        controlPanel.add(buttonPanel, BorderLayout.NORTH);
-        controlPanel.add(quickAccessPanel, BorderLayout.SOUTH);
+        controlPanel.add(quickAccessPanel, BorderLayout.NORTH); // 支出/收入按钮移到上方
+        controlPanel.add(buttonPanel, BorderLayout.SOUTH); // 操作按钮移到下方
         
         panel.add(controlPanel, BorderLayout.SOUTH);
         
