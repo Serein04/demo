@@ -10,16 +10,13 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.File;
 import java.time.LocalDate;
-import java.time.Month;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -63,7 +60,6 @@ public class MainFrame extends JFrame {
     private JComboBox<String> paymentMethodComboBox;
     private JTextField amountField;
     private JTextField descriptionField;
-    private JCheckBox expenseCheckBox;
     private JButton addButton;
     private JButton importButton;
     private JButton deleteButton;
@@ -519,9 +515,7 @@ public class MainFrame extends JFrame {
         panel.add(topPanel, BorderLayout.NORTH);
         
         // 创建AI助手面板
-        AIAssistantPanel aiPanel = new AIAssistantPanel(transactionManager, analyzer);
-        panel.add(aiPanel, BorderLayout.CENTER);
-        
+
         return panel;
     }
     
@@ -754,126 +748,6 @@ public class MainFrame extends JFrame {
      * 生成分析报告
      */
     private void generateAnalysisReport() {
-        // 获取所有交易记录
-        List<Transaction> transactions = transactionManager.getAllTransactions();
-        
-        if (transactions.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "没有交易记录可供分析", "提示", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        
-        // 清空分析面板
-        analysisPanel.removeAll();
-        
-        // 添加返回主界面按钮
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton backButton = new JButton("返回主界面");
-        backButton.addActionListener(e -> returnToMainScreen());
-        topPanel.add(backButton);
-        
-        // 重新添加控制面板
-        JPanel controlPanel = new JPanel();
-        JButton analyzeButton = new JButton("生成分析报告");
-        analyzeButton.addActionListener(e -> generateAnalysisReport());
-        controlPanel.add(analyzeButton);
-        
-        // 组合顶部面板
-        JPanel northPanel = new JPanel(new BorderLayout());
-        northPanel.add(topPanel, BorderLayout.NORTH);
-        northPanel.add(controlPanel, BorderLayout.CENTER);
-        
-        analysisPanel.add(northPanel, BorderLayout.NORTH);
-        
-        // 创建报告面板
-        JPanel reportPanel = new JPanel();
-        reportPanel.setLayout(new BoxLayout(reportPanel, BoxLayout.Y_AXIS));
-        
-        // 添加月度支出趋势分析
-        reportPanel.add(new JLabel("<html><h2>月度支出趋势</h2></html>"));
-        Map<YearMonth, Double> monthlyTrend = analyzer.analyzeMonthlyTrend(transactions);
-        // 这里可以添加图表展示，简化版使用文本展示
-        StringBuilder trendText = new StringBuilder("<html><ul>");
-        for (Map.Entry<YearMonth, Double> entry : monthlyTrend.entrySet()) {
-            trendText.append(String.format("<li>%s: %.2f元</li>", entry.getKey(), entry.getValue()));
-        }
-        trendText.append("</ul></html>");
-        reportPanel.add(new JLabel(trendText.toString()));
-        
-        // 添加类别分布分析
-        reportPanel.add(new JLabel("<html><h2>支出类别分布</h2></html>"));
-        Map<String, Double> categoryDistribution = analyzer.analyzeCategoryDistribution(transactions);
-        StringBuilder distributionText = new StringBuilder("<html><ul>");
-        for (Map.Entry<String, Double> entry : categoryDistribution.entrySet()) {
-            distributionText.append(String.format("<li>%s: %.2f%%</li>", entry.getKey(), entry.getValue()));
-        }
-        distributionText.append("</ul></html>");
-        reportPanel.add(new JLabel(distributionText.toString()));
-        
-        // 添加异常支出分析
-        reportPanel.add(new JLabel("<html><h2>异常支出检测</h2></html>"));
-        List<Transaction> abnormalExpenses = analyzer.detectAbnormalExpenses(transactions);
-        if (abnormalExpenses.isEmpty()) {
-            reportPanel.add(new JLabel("未检测到异常支出"));
-        } else {
-            StringBuilder abnormalText = new StringBuilder("<html><ul>");
-            for (Transaction t : abnormalExpenses) {
-                abnormalText.append(String.format("<li>%s: %.2f元 (%s)</li>", 
-                        t.getCategory(), t.getAmount(), t.getDate().format(DATE_FORMATTER)));
-            }
-            abnormalText.append("</ul></html>");
-            reportPanel.add(new JLabel(abnormalText.toString()));
-        }
-        
-        // 添加季节性支出分析
-        reportPanel.add(new JLabel("<html><h2>季节性支出模式</h2></html>"));
-        Map<Month, List<String>> seasonalPatterns = analyzer.detectSeasonalPatterns(transactions);
-        if (seasonalPatterns.isEmpty()) {
-            reportPanel.add(new JLabel("未检测到明显的季节性支出模式"));
-        } else {
-            StringBuilder seasonalText = new StringBuilder("<html><ul>");
-            for (Map.Entry<Month, List<String>> entry : seasonalPatterns.entrySet()) {
-                seasonalText.append(String.format("<li>%s: %s</li>", 
-                        entry.getKey(), String.join(", ", entry.getValue())));
-            }
-            seasonalText.append("</ul></html>");
-            reportPanel.add(new JLabel(seasonalText.toString()));
-        }
-        
-        // 添加预算建议
-        reportPanel.add(new JLabel("<html><h2>预算建议</h2></html>"));
-        Map<String, Double> budgetSuggestions = analyzer.generateBudgetSuggestions(transactions, budgetManager);
-        if (budgetSuggestions.isEmpty()) {
-            reportPanel.add(new JLabel("当前预算设置合理，无需调整"));
-        } else {
-            StringBuilder suggestionsText = new StringBuilder("<html><ul>");
-            for (Map.Entry<String, Double> entry : budgetSuggestions.entrySet()) {
-                suggestionsText.append(String.format("<li>%s: 建议预算%.2f元</li>", 
-                        entry.getKey(), entry.getValue()));
-            }
-            suggestionsText.append("</ul></html>");
-            reportPanel.add(new JLabel(suggestionsText.toString()));
-        }
-        
-        // 添加节省机会分析
-        reportPanel.add(new JLabel("<html><h2>节省机会</h2></html>"));
-        List<Map<String, Object>> savingOpportunities = analyzer.analyzeSavingOpportunities(transactions);
-        if (savingOpportunities.isEmpty()) {
-            reportPanel.add(new JLabel("未发现明显的节省机会"));
-        } else {
-            StringBuilder opportunitiesText = new StringBuilder("<html><ul>");
-            for (Map<String, Object> opportunity : savingOpportunities) {
-                opportunitiesText.append(String.format("<li>%s</li>", opportunity.get("description")));
-            }
-            opportunitiesText.append("</ul></html>");
-            reportPanel.add(new JLabel(opportunitiesText.toString()));
-        }
-        
-        // 将报告面板添加到滚动面板中
-        JScrollPane scrollPane = new JScrollPane(reportPanel);
-        analysisPanel.add(scrollPane, BorderLayout.CENTER);
-        
-        // 刷新UI
-        analysisPanel.revalidate();
-        analysisPanel.repaint();
+      
     }
 }
